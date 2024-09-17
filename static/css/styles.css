@@ -1,0 +1,51 @@
+/* Định dạng container */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    text-align: center;
+}
+
+/* Tiêu đề */
+.title {
+    font-size: 2.5em;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-align: left; /* Theo F-pattern */
+}
+
+/* Grid layout */
+.button-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-gap: 20px;
+}
+
+/* Button thiết kế */
+.grid-button {
+    padding: 15px;
+    font-size: 1.2em;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.grid-button:hover {
+    background-color: #45a049;
+}
+
+/* Responsive: màn hình nhỏ */
+@media (max-width: 768px) {
+    .title {
+        font-size: 2em;
+    }
+
+    .grid-button {
+        font-size: 1em;
+        padding: 10px;
+    }
+}
