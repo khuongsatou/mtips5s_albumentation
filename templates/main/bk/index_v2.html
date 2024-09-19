@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Transformations</title>
+    <script>
+        // Hàm để upload ảnh
+        function uploadImage() {
+            const fileInput = document.getElementById('fileInput');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.image_path) {
+                    // Hiển thị ảnh sau khi upload thành công
+                    document.getElementById('image').src = data.image_path;
+                    document.getElementById('imagePath').value = data.image_path;
+                } else {
+                    console.error(data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // Hàm để áp dụng transform ảnh
+        function applyTransform(transformType) {
+            const imagePath = document.getElementById('imagePath').value;
+
+            // alert('Image path'+transformType);
+
+            fetch('/api/transform', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    transform: transformType,
+                    image_path: imagePath,
+                    params: {
+                        "p": 0.8,
+                        "limit": 45
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.processed_image_path) {
+                    // alert('Image path '+data.processed_image_path);
+                    // Thêm chuỗi ngẫu nhiên vào URL để tránh cache
+                    const randomParam = `?t=${new Date().getTime()}`;
+                    // Hiển thị ảnh sau khi biến đổi
+                    document.getElementById('image').src = data.processed_image_path+ randomParam;
+                } else {
+                    console.error(data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Upload and Transform Image</h1>
+
+        <!-- Form để tải lên ảnh -->
+        <input type="file" id="fileInput" accept="image/*">
+        <button onclick="uploadImage()">Upload</button>
+
+        <!-- Ẩn đường dẫn ảnh -->
+        <input type="hidden" id="imagePath" value="">
+
+        <!-- Các nút transform -->
+        <button onclick="applyTransform('horizontal_flip')">Horizontal Flip</button>
+        <button onclick="applyTransform('vertical_flip')">Vertical Flip</button>
+        <button onclick="applyTransform('rotate_90')">Rotate 90</button>
+
+        <!-- Hiển thị ảnh -->
+        <div>
+            <img id="image" src="https://placehold.co/600x400" alt="Image will appear here" style="max-width: 100%; height: auto;">
+        </div>
+    </div>
+</body>
+</html>

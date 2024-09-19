@@ -7,6 +7,8 @@ from modules.image_processor import ImageProcessor
 from modules.main.main import show_visualize
 from werkzeug.utils import secure_filename
 from modules.image_processor import ImageProcessor
+import albumentations as A
+import numpy as np
 
 # Tạo Blueprint
 main = Blueprint('main', __name__)
@@ -53,27 +55,60 @@ def upload_image():
         file.save(image_path)
         return jsonify({"message": "File uploaded successfully", "image_path": image_path}), 200
 
-# Route để thực hiện transform ảnh
 @main.route('/api/transform', methods=['POST'])
 def transform_image():
+    # Lấy toàn bộ payload từ yêu cầu
     data = request.json
+
+    # Xử lý các thông tin cơ bản
     transform_type = data.get('transform')
     image_path = data.get('image_path')
+    params = data.get('params', {})
 
     if not image_path or not os.path.exists(image_path):
         return jsonify({"error": "Invalid image path"}), 400
+
+    # Lấy giá trị từ params
+    p = params.get('p', 1.0)
+    limit = params.get('limit', 90)
+    blur = params.get('blur', 0)
+    sharpen = params.get('sharpen', 0)
+    brightness = params.get('brightness', 1.0)
+    contrast = params.get('contrast', 1.0)
+    noise = params.get('noise', 0)
 
     # Đọc và xử lý ảnh
     image = cv2.imread(image_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    # Áp dụng biến đổi dựa trên loại được chọn
+    # Tạo danh sách các phép biến đổi
+    transforms = []
+
     if transform_type == 'horizontal_flip':
-        image = cv2.flip(image, 1)
+        transforms.append(A.HorizontalFlip(p=p))
     elif transform_type == 'vertical_flip':
-        image = cv2.flip(image, 0)
+        transforms.append(A.VerticalFlip(p=p))
     elif transform_type == 'rotate_90':
-        image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+        transforms.append(A.Rotate(limit=(limit, limit), p=p))
+    
+    # Thêm các bộ lọc và biến đổi bổ sung
+    if blur > 0:
+        # transforms.append(A.GaussianBlur(blur_limit=blur, p=1.0))
+        # Đảm bảo blur_limit luôn là số lẻ hoặc 0
+        blur_limit = (blur, blur) if blur % 2 == 1 else (blur - 1, blur - 1)
+        transforms.append(A.GaussianBlur(blur_limit=blur_limit, p=1.0))
+    if sharpen > 0:
+        transforms.append(A.Sharpen(p=1.0))
+    if brightness != 1.0 or contrast != 1.0:
+        transforms.append(A.RandomBrightnessContrast(brightness_limit=(brightness-1, brightness-1), contrast_limit=(contrast-1, contrast-1), p=1.0))
+    if noise > 0:
+        transforms.append(A.GaussNoise(var_limit=(noise, noise), p=1.0))
+
+    # Áp dụng tất cả các phép biến đổi
+    if transforms:
+        transform = A.Compose(transforms)
+        augmented = transform(image=image)
+        image = augmented['image']
 
     # Lưu ảnh đã xử lý vào thư mục processed_images
     processed_image_path = os.path.join(PROCESSED_FOLDER, 'processed_image.jpg')

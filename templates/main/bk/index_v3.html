@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Transformations</title>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        img {
+            margin-top: 20px;
+            border: 2px solid #ddd;
+        }
+
+        .params {
+            margin: 20px 0;
+        }
+
+        label {
+            margin-right: 10px;
+        }
+
+        input[type="number"], input[type="range"] {
+            width: 100px;
+            margin-left: 10px;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+    </style>
+    <script>
+        // Hàm để upload ảnh
+        function uploadImage() {
+            const fileInput = document.getElementById('fileInput');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.image_path) {
+                    // Hiển thị ảnh sau khi upload thành công
+                    document.getElementById('image').src = data.image_path;
+                    document.getElementById('imagePath').value = data.image_path;
+                } else {
+                    console.error(data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // Hàm để áp dụng transform ảnh
+        function applyTransform(transformType) {
+            const imagePath = document.getElementById('imagePath').value;
+            const p = parseFloat(document.getElementById('probability').value);
+            const limit = parseInt(document.getElementById('limit').value);
+
+            fetch('/api/transform', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    transform: transformType,
+                    image_path: imagePath,
+                    params: {
+                        "p": p,
+                        "limit": limit
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.processed_image_path) {
+                    // Thêm chuỗi ngẫu nhiên vào URL để tránh cache
+                    const randomParam = `?t=${new Date().getTime()}`;
+                    // Hiển thị ảnh sau khi biến đổi
+                    document.getElementById('image').src = data.processed_image_path + randomParam;
+                } else {
+                    console.error(data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Upload and Transform Image</h1>
+
+        <!-- Form để tải lên ảnh -->
+        <input type="file" id="fileInput" accept="image/*">
+        <button onclick="uploadImage()">Upload</button>
+
+        <!-- Ẩn đường dẫn ảnh -->
+        <input type="hidden" id="imagePath" value="">
+
+        <!-- Các tham số cho biến đổi -->
+        <div class="params">
+            <label for="probability">Probability (p):</label>
+            <input type="number" id="probability" min="0" max="1" step="0.1" value="1.0">
+        </div>
+
+        <div class="params">
+            <label for="limit">Limit (Degrees):</label>
+            <input type="number" id="limit" min="0" max="360" step="1" value="90">
+        </div>
+
+        <!-- Các nút transform -->
+        <button onclick="applyTransform('horizontal_flip')">Horizontal Flip</button>
+        <button onclick="applyTransform('vertical_flip')">Vertical Flip</button>
+        <button onclick="applyTransform('rotate_90')">Rotate</button>
+
+        <!-- Hiển thị ảnh -->
+        <div>
+            <img id="image" src="https://placehold.co/600x400" alt="Image will appear here" style="max-width: 100%; height: auto;">
+        </div>
+    </div>
+</body>
+</html>
