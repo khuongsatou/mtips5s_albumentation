@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Transformations</title>
+    <style>
+      .container {
+        margin: 0 auto;
+        text-align: center;
+        display: flex;
+      }
+
+      .ctnLeft {
+        flex: 1;
+      }
+
+      .ctnRight {
+        flex: 1;
+        padding: 20px;
+      }
+
+      img {
+        margin-top: 20px;
+        border: 2px solid #ddd;
+      }
+
+      .params {
+        margin: 20px 0;
+      }
+
+      label {
+        margin-right: 10px;
+      }
+
+      input[type="range"] {
+        width: 200px;
+      }
+
+      button {
+        margin-top: 10px;
+        padding: 10px 20px;
+        cursor: pointer;
+      }
+
+      .output {
+        font-weight: bold;
+        margin-left: 10px;
+      }
+    </style>
+    <script>
+      function debounce(func, wait) {
+        let timeout;
+        return function (...args) {
+          const context = this;
+          clearTimeout(timeout);
+          timeout = setTimeout(() => func.apply(context, args), wait);
+        };
+      }
+
+      function uploadImage() {
+        const fileInput = document.getElementById("fileInput");
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+
+        fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.image_path) {
+              document.getElementById("image").src = data.image_path;
+              document.getElementById("imagePath").value = data.image_path;
+            } else {
+              console.error(data.error);
+            }
+          })
+          .catch((error) => console.error("Error:", error));
+      }
+
+      const applyTransform = debounce(function () {
+        const imagePath = document.getElementById("imagePath").value;
+        const params = {
+          p: parseFloat(document.getElementById("probability").value),
+          limit: parseInt(document.getElementById("limit").value),
+          blur: parseInt(document.getElementById("blur").value),
+          sharpen: parseInt(document.getElementById("sharpen").value),
+          brightness: parseFloat(document.getElementById("brightness").value),
+          contrast: parseFloat(document.getElementById("contrast").value),
+          noise: parseInt(document.getElementById("noise").value),
+          median_blur: parseInt(document.getElementById("medianBlur").value),
+          glass_blur: parseInt(document.getElementById("glassBlur").value),
+          zoom_blur: parseInt(document.getElementById("zoomBlur").value),
+          emboss: parseFloat(document.getElementById("emboss").value),
+          solarize: parseFloat(document.getElementById("solarize").value),
+        };
+
+        const transformType = document.querySelector(
+          'input[name="transform"]:checked'
+        ).value;
+
+        if (!imagePath) {
+          console.error("Image path is not set");
+          return;
+        }
+
+        fetch("/api/transform", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            transform: transformType,
+            image_path: imagePath,
+            params: params,
+          }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.processed_image_path) {
+              const randomParam = `?t=${new Date().getTime()}`;
+              document.getElementById("image").src =
+                data.processed_image_path + randomParam;
+            } else {
+              console.error(data.error);
+            }
+          })
+          .catch((error) => console.error("Error:", error));
+      }, 500);
+
+      function updateValue(id, value) {
+        document.getElementById(id).innerText = value;
+        applyTransform();
+      }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="ctnLeft">
+        <h1>Upload and Transform Image</h1>
+
+        <input type="file" id="fileInput" accept="image/*" />
+        <button onclick="uploadImage()">Upload</button>
+
+        <input type="hidden" id="imagePath" value="" />
+
+        <!-- Các tham số -->
+        <div class="params">
+          <label for="probability">Probability (p):</label>
+          <input
+            type="range"
+            id="probability"
+            min="0"
+            max="1"
+            step="0.1"
+            value="1.0"
+            oninput="updateValue('probabilityValue', this.value)"
+          />
+          <span id="probabilityValue" class="output">1.0</span>
+        </div>
+
+        <div class="params">
+          <label for="limit">Limit (Degrees):</label>
+          <input
+            type="range"
+            id="limit"
+            min="0"
+            max="360"
+            step="1"
+            value="90"
+            oninput="updateValue('limitValue', this.value)"
+          />
+          <span id="limitValue" class="output">90</span>
+        </div>
+
+        <div class="params">
+          <label for="blur">Blur:</label>
+          <input
+            type="range"
+            id="blur"
+            min="0"
+            max="10"
+            step="1"
+            value="0"
+            oninput="updateValue('blurValue', this.value)"
+          />
+          <span id="blurValue" class="output">0</span>
+        </div>
+
+        <div class="params">
+          <label for="sharpen">Sharpen:</label>
+          <input
+            type="range"
+            id="sharpen"
+            min="0"
+            max="10"
+            step="1"
+            value="0"
+            oninput="updateValue('sharpenValue', this.value)"
+          />
+          <span id="sharpenValue" class="output">0</span>
+        </div>
+
+        <div class="params">
+          <label for="brightness">Brightness:</label>
+          <input
+            type="range"
+            id="brightness"
+            min="0"
+            max="2"
+            step="0.1"
+            value="1.0"
+            oninput="updateValue('brightnessValue', this.value)"
+          />
+          <span id="brightnessValue" class="output">1.0</span>
+        </div>
+
+        <div class="params">
+          <label for="contrast">Contrast:</label>
+          <input
+            type="range"
+            id="contrast"
+            min="0"
+            max="2"
+            step="0.1"
+            value="1.0"
+            oninput="updateValue('contrastValue', this.value)"
+          />
+          <span id="contrastValue" class="output">1.0</span>
+        </div>
+
+        <div class="params">
+          <label for="noise">Gaussian Noise:</label>
+          <input
+            type="range"
+            id="noise"
+            min="0"
+            max="100"
+            step="5"
+            value="0"
+            oninput="updateValue('noiseValue', this.value)"
+          />
+          <span id="noiseValue" class="output">0</span>
+        </div>
+
+        <!-- Các input mới -->
+        <div class="params">
+          <label for="medianBlur">Median Blur:</label>
+          <input
+            type="range"
+            id="medianBlur"
+            min="0"
+            max="10"
+            step="1"
+            value="0"
+            oninput="updateValue('medianBlurValue', this.value)"
+          />
+          <span id="medianBlurValue" class="output">0</span>
+        </div>
+
+        <div class="params">
+          <label for="glassBlur">Glass Blur:</label>
+          <input
+            type="range"
+            id="glassBlur"
+            min="0"
+            max="10"
+            step="1"
+            value="0"
+            oninput="updateValue('glassBlurValue', this.value)"
+          />
+          <span id="glassBlurValue" class="output">0</span>
+        </div>
+
+        <div class="params">
+          <label for="zoomBlur">Zoom Blur:</label>
+          <input
+            type="range"
+            id="zoomBlur"
+            min="0"
+            max="10"
+            step="1"
+            value="0"
+            oninput="updateValue('zoomBlurValue', this.value)"
+          />
+          <span id="zoomBlurValue" class="output">0</span>
+        </div>
+
+        <div class="params">
+          <label for="emboss">Emboss:</label>
+          <input
+            type="range"
+            id="emboss"
+            min="0"
+            max="1"
+            step="0.1"
+            value="0"
+            oninput="updateValue('embossValue', this.value)"
+          />
+          <span id="embossValue" class="output">0</span>
+        </div>
+
+        <div class="params">
+          <label for="solarize">Solarize:</label>
+          <input
+            type="range"
+            id="solarize"
+            min="0"
+            max="1"
+            step="0.1"
+            value="0"
+            oninput="updateValue('solarizeValue', this.value)"
+          />
+          <span id="solarizeValue" class="output">0</span>
+        </div>
+
+        <!-- Các nút chọn transform -->
+        <div class="params">
+          <label for="transform">Transformation:</label>
+          <label
+            ><input
+              type="radio"
+              name="transform"
+              value="horizontal_flip"
+              checked
+            />
+            Horizontal Flip</label
+          >
+          <label
+            ><input type="radio" name="transform" value="vertical_flip" />
+            Vertical Flip</label
+          >
+          <label
+            ><input type="radio" name="transform" value="rotate_90" />
+            Rotate</label
+          >
+        </div>
+      </div>
+
+      <div class="ctnRight">
+        <img
+          id="image"
+          src="https://placehold.co/600x400"
+          alt="Image will appear here"
+          style="max-width: 100%; height: auto"
+        />
+      </div>
+    </div>
+  </body>
+</html>

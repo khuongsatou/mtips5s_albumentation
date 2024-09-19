@@ -10,6 +10,9 @@ from modules.image_processor import ImageProcessor
 import albumentations as A
 import numpy as np
 
+from modules.transform.image_transformer import ImageTransformer
+from modules.transform.transform_params import TransformParams
+
 # Tạo Blueprint
 main = Blueprint('main', __name__)
 
@@ -36,6 +39,10 @@ def allowed_file(filename):
 @main.route('/', methods=['GET'])
 def homepage():
     return render_template('main/index.html')
+
+@main.route('/v2', methods=['GET'])
+def homepage_v2():
+    return render_template('main/v2/index.html')
 
 
 # Route để upload ảnh
@@ -113,5 +120,32 @@ def transform_image():
     # Lưu ảnh đã xử lý vào thư mục processed_images
     processed_image_path = os.path.join(PROCESSED_FOLDER, 'processed_image.jpg')
     plt.imsave(processed_image_path, image)
+
+    return jsonify({"message": "Image transformed successfully", "processed_image_path": processed_image_path}), 200
+
+
+@main.route('/api/transform_v2', methods=['POST'])
+def transform_image_v2():
+    # Lấy toàn bộ payload từ yêu cầu
+    data = request.json
+
+    # Tạo đối tượng TransformParams
+    transform_params = TransformParams(data)
+
+    # Tạo đối tượng ImageTransformer
+    image_transformer = ImageTransformer(transform_params)
+
+    # Kiểm tra đường dẫn ảnh
+    is_valid, error_response, status_code = image_transformer.validate_image()
+    if not is_valid:
+        return jsonify(error_response), status_code
+
+    # Đọc và xử lý ảnh
+    image = image_transformer.load_image()
+    image = image_transformer.apply_transforms(image)
+
+    # Lưu ảnh đã xử lý vào thư mục processed_images
+    processed_image_path = os.path.join(PROCESSED_FOLDER, 'processed_image.jpg')
+    image_transformer.save_image(image, processed_image_path)
 
     return jsonify({"message": "Image transformed successfully", "processed_image_path": processed_image_path}), 200
